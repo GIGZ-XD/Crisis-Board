@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrisisBoard — Emergency Resource Coordination</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="scan"></div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">CB</div>
+    <div>
+      <h1>CrisisBoard</h1>
+      <span class="sub">Emergency Resource Coordination</span>
+    </div>
+  </div>
+  <div class="clock"><span class="live-dot"></span>SESSION ACTIVE — <b id="clockTime">--:--:--</b></div>
+</header>
+
+<div class="stats">
+  <div class="stat active"><div class="label">Active Requests</div><div class="value" id="statActive">0</div></div>
+  <div class="stat resolved"><div class="label">Resolved</div><div class="value" id="statResolved">0</div></div>
+  <div class="stat people"><div class="label">People Affected (Active)</div><div class="value" id="statPeople">0</div></div>
+  <div class="stat"><div class="label">Highest Priority</div><div class="value" id="statTop">—</div></div>
+</div>
+
+<main>
+  <section class="form-panel">
+    <h2>New Request</h2>
+    <form id="reqForm">
+      <label for="location">Location</label>
+      <input type="text" id="location" placeholder="e.g. Block 4, Riverside Colony" required>
+
+      <label for="people">People Affected</label>
+      <input type="number" id="people" min="1" value="1" required>
+
+      <label for="type">Assistance Type</label>
+      <select id="type">
+        <option value="Medical">Medical</option>
+        <option value="Rescue">Rescue</option>
+        <option value="Shelter">Shelter</option>
+        <option value="Food">Food</option>
+        <option value="Transport">Transport</option>
+      </select>
+
+      <label>Urgency Level</label>
+      <div class="urgency-row" id="urgencyRow">
+        <div class="urgency-opt" data-level="low">Low</div>
+        <div class="urgency-opt" data-level="medium">Medium</div>
+        <div class="urgency-opt sel" data-level="high">High</div>
+        <div class="urgency-opt" data-level="critical">Critical</div>
+      </div>
+
+      <button type="submit" class="submit-btn">Log Request</button>
+      <div class="form-hint">Priority score weighs urgency level, people affected, and assistance type. Requests re-rank automatically as new ones come in.</div>
+    </form>
+  </section>
+
+  <section class="board">
+    <div class="board-head">
+      <h2>Ranked Requests</h2>
+      <div class="tabs">
+        <button class="tab active" data-tab="active">Active</button>
+        <button class="tab" data-tab="resolved">Resolved</button>
+      </div>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>

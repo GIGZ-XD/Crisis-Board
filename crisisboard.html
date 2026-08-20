@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrisisBoard — Emergency Resource Coordination</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12161a;
+    --panel:#1a2027;
+    --panel-2:#1f262e;
+    --line:#2a323b;
+    --text:#e9edf0;
+    --muted:#8593a0;
+    --muted-2:#5c6874;
+    --critical:#e6473c;
+    --high:#ef9a45;
+    --medium:#e3c23f;
+    --low:#49a887;
+    --accent:#5b8def;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 90% -10%, rgba(91,141,239,0.07), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  ::selection{background:var(--accent);color:#fff;}
+  .scan{
+    position:fixed; inset:0; pointer-events:none; z-index:50;
+    background:repeating-linear-gradient(to bottom, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    opacity:.5;
+  }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 32px; border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, var(--panel), rgba(26,32,39,0.4));
+    position:sticky; top:0; z-index:10; backdrop-filter:blur(6px);
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand-mark{
+    width:38px; height:38px; border-radius:8px;
+    background:linear-gradient(135deg, var(--critical), #b8291f);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:15px; color:#fff;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.08), 0 4px 14px rgba(230,71,60,0.35);
+    flex-shrink:0;
+  }
+  .brand h1{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:22px;
+    letter-spacing:0.5px; margin:0; text-transform:uppercase;
+  }
+  .brand span.sub{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    color:var(--muted); letter-spacing:1.5px; margin-top:2px; text-transform:uppercase;
+  }
+  .clock{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--muted);
+    text-align:right; letter-spacing:0.5px;
+  }
+  .clock b{color:var(--text); font-weight:600;}
+  .live-dot{
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:var(--low); margin-right:6px; box-shadow:0 0 8px var(--low);
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+  .stats{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+    background:var(--line); border-bottom:1px solid var(--line);
+  }
+  .stat{
+    background:var(--panel); padding:16px 24px;
+  }
+  .stat .label{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:1.3px; margin-bottom:6px;
+  }
+  .stat .value{
+    font-family:'Oswald',sans-serif; font-size:30px; font-weight:600; line-height:1;
+  }
+  .stat.active .value{color:var(--critical);}
+  .stat.resolved .value{color:var(--low);}
+  .stat.people .value{color:var(--accent);}
+
+  main{
+    display:grid; grid-template-columns:360px 1fr; gap:0; align-items:start;
+  }
+  @media (max-width:900px){ main{grid-template-columns:1fr;} }
+
+  .form-panel{
+    padding:28px; border-right:1px solid var(--line);
+    position:sticky; top:129px;
+  }
+  @media (max-width:900px){ .form-panel{position:static; border-right:none; border-bottom:1px solid var(--line);} }
+
+  .form-panel h2{
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:1px;
+    font-size:15px; margin:0 0 18px; color:var(--muted);
+    display:flex; align-items:center; gap:8px;
+  }
+  .form-panel h2::before{content:"◆"; color:var(--critical); font-size:11px;}
+
+  label{
+    display:block; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+    text-transform:uppercase; letter-spacing:1px; color:var(--muted-2);
+    margin:16px 0 6px;
+  }
+  label:first-of-type{margin-top:0;}
+  input[type=text], input[type=number], select{
+    width:100%; background:var(--panel-2); border:1px solid var(--line);
+    color:var(--text); padding:10px 12px; border-radius:6px;
+    font-family:'Inter',sans-serif; font-size:14px; outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus{
+    border-color:var(--accent); box-shadow:0 0 0 3px rgba(91,141,239,0.15);
+  }
+  select{appearance:none; cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238593a0'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center;
+  }
+
+  .urgency-row{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:6px;}
+  .urgency-opt{
+    padding:8px 4px; text-align:center; border-radius:6px; cursor:pointer;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase;
+    border:1px solid var(--line); color:var(--muted); letter-spacing:0.5px;
+    transition:all .15s;
+  }
+  .urgency-opt:hover{border-color:var(--muted-2);}
+  .urgency-opt.sel[data-level="low"]{background:rgba(73,168,135,0.18); border-color:var(--low); color:var(--low);}
+  .urgency-opt.sel[data-level="medium"]{background:rgba(227,194,63,0.18); border-color:var(--medium); color:var(--medium);}
+  .urgency-opt.sel[data-level="high"]{background:rgba(239,154,69,0.18); border-color:var(--high); color:var(--high);}
+  .urgency-opt.sel[data-level="critical"]{background:rgba(230,71,60,0.18); border-color:var(--critical); color:var(--critical);}
+
+  .submit-btn{
+    width:100%; margin-top:22px; padding:13px; border:none; border-radius:7px;
+    background:linear-gradient(135deg, var(--critical), #b8291f); color:#fff;
+    font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:1px; text-transform:uppercase;
+    cursor:pointer; font-weight:600; box-shadow:0 6px 18px rgba(230,71,60,0.28);
+    transition:transform .1s, box-shadow .15s;
+  }
+  .submit-btn:hover{transform:translateY(-1px); box-shadow:0 8px 22px rgba(230,71,60,0.4);}
+  .submit-btn:active{transform:translateY(0);}
+  .form-hint{font-size:12px; color:var(--muted-2); margin-top:10px; line-height:1.5;}
+
+  .board{padding:28px;}
+  .board-head{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;
+  }
+  .board-head h2{
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:1px;
+    font-size:15px; margin:0; color:var(--muted); display:flex; align-items:center; gap:8px;
+  }
+  .board-head h2::before{content:"◆"; color:var(--accent); font-size:11px;}
+  .tabs{display:flex; gap:4px; background:var(--panel-2); padding:3px; border-radius:8px; border:1px solid var(--line);}
+  .tab{
+    padding:6px 14px; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.8px; color:var(--muted); border-radius:6px; cursor:pointer; border:none; background:none;
+  }
+  .tab.active{background:var(--panel); color:var(--text);}
+
+  .cards{display:flex; flex-direction:column; gap:12px;}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:16px 18px; display:grid; grid-template-columns:56px 1fr auto; gap:16px;
+    align-items:center; position:relative; overflow:hidden;
+    animation:slideIn .3s ease;
+  }
+  @keyframes slideIn{from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);}}
+  .card::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+  }
+  .card[data-level="critical"]::before{background:var(--critical);}
+  .card[data-level="high"]::before{background:var(--high);}
+  .card[data-level="medium"]::before{background:var(--medium);}
+  .card[data-level="low"]::before{background:var(--low);}
+  .card.resolved{opacity:0.5;}
+  .card.resolved .rank{background:var(--panel-2); color:var(--muted-2);}
+
+  .rank{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:15px;
+    width:56px; height:56px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; text-align:center; line-height:1.1; flex-shrink:0;
+  }
+  .rank .num{font-size:18px;}
+  .rank .of{font-size:9px; color:var(--muted-2); font-weight:400;}
+  .card[data-level="critical"] .rank{background:rgba(230,71,60,0.16); color:var(--critical);}
+  .card[data-level="high"] .rank{background:rgba(239,154,69,0.16); color:var(--high);}
+  .card[data-level="medium"] .rank{background:rgba(227,194,63,0.16); color:var(--medium);}
+  .card[data-level="low"] .rank{background:rgba(73,168,135,0.16); color:var(--low);}
+
+  .card-body .title-row{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .card-body .req-id{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted-2);}
+  .card-body .req-type{font-family:'Oswald',sans-serif; font-size:16px; font-weight:600; text-transform:uppercase; letter-spacing:0.3px;}
+  .card-body .meta{
+    margin-top:6px; font-size:13px; color:var(--muted); display:flex; gap:14px; flex-wrap:wrap;
+  }
+  .card-body .meta span{display:flex; align-items:center; gap:5px;}
+  .badge{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.8px;
+    padding:2px 8px; border-radius:20px; font-weight:600;
+  }
+  .card[data-level="critical"] .badge{background:rgba(230,71,60,0.2); color:var(--critical);}
+  .card[data-level="high"] .badge{background:rgba(239,154,69,0.2); color:var(--high);}
+  .card[data-level="medium"] .badge{background:rgba(227,194,63,0.2); color:var(--medium);}
+  .card[data-level="low"] .badge{background:rgba(73,168,135,0.2); color:var(--low);}
+
+  .card-right{display:flex; align-items:center; gap:16px;}
+  .score-wrap{text-align:right;}
+  .score{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:22px;}
+  .score-label{font-size:9px; color:var(--muted-2); text-transform:uppercase; letter-spacing:1px;}
+  .meter{width:90px; height:5px; border-radius:3px; background:var(--panel-2); margin-top:6px; overflow:hidden;}
+  .meter-fill{height:100%; border-radius:3px;}
+  .card[data-level="critical"] .meter-fill{background:var(--critical);}
+  .card[data-level="high"] .meter-fill{background:var(--high);}
+  .card[data-level="medium"] .meter-fill{background:var(--medium);}
+  .card[data-level="low"] .meter-fill{background:var(--low);}
+
+  .resolve-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.6px;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--muted);
+    padding:8px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;
+  }
+  .resolve-btn:hover{border-color:var(--low); color:var(--low);}
+  .card.resolved .resolve-btn{visibility:hidden;}
+
+  .empty{
+    text-align:center; padding:60px 20px; color:var(--muted-2);
+    font-family:'IBM Plex Mono',monospace; font-size:13px; border:1px dashed var(--line); border-radius:10px;
+  }
+
+  @media (max-width:640px){
+    .card{grid-template-columns:44px 1fr; grid-template-rows:auto auto;}
+    .card-right{grid-column:1 / -1; justify-content:space-between; margin-top:10px;}
+    .rank{width:44px; height:44px;}
+  }
+</style>
+</head>
+<body>
+<div class="scan"></div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">CB</div>
+    <div>
+      <h1>CrisisBoard</h1>
+      <span class="sub">Emergency Resource Coordination</span>
+    </div>
+  </div>
+  <div class="clock"><span class="live-dot"></span>SESSION ACTIVE — <b id="clockTime">--:--:--</b></div>
+</header>
+
+<div class="stats">
+  <div class="stat active"><div class="label">Active Requests</div><div class="value" id="statActive">0</div></div>
+  <div class="stat resolved"><div class="label">Resolved</div><div class="value" id="statResolved">0</div></div>
+  <div class="stat people"><div class="label">People Affected (Active)</div><div class="value" id="statPeople">0</div></div>
+  <div class="stat"><div class="label">Highest Priority</div><div class="value" id="statTop">—</div></div>
+</div>
+
+<main>
+  <section class="form-panel">
+    <h2>New Request</h2>
+    <form id="reqForm">
+      <label for="location">Location</label>
+      <input type="text" id="location" placeholder="e.g. Block 4, Riverside Colony" required>
+
+      <label for="people">People Affected</label>
+      <input type="number" id="people" min="1" value="1" required>
+
+      <label for="type">Assistance Type</label>
+      <select id="type">
+        <option value="Medical">Medical</option>
+        <option value="Rescue">Rescue</option>
+        <option value="Shelter">Shelter</option>
+        <option value="Food">Food</option>
+        <option value="Transport">Transport</option>
+      </select>
+
+      <label>Urgency Level</label>
+      <div class="urgency-row" id="urgencyRow">
+        <div class="urgency-opt" data-level="low">Low</div>
+        <div class="urgency-opt" data-level="medium">Medium</div>
+        <div class="urgency-opt sel" data-level="high">High</div>
+        <div class="urgency-opt" data-level="critical">Critical</div>
+      </div>
+
+      <button type="submit" class="submit-btn">Log Request</button>
+      <div class="form-hint">Priority score weighs urgency level, people affected, and assistance type. Requests re-rank automatically as new ones come in.</div>
+    </form>
+  </section>
+
+  <section class="board">
+    <div class="board-head">
+      <h2>Ranked Requests</h2>
+      <div class="tabs">
+        <button class="tab active" data-tab="active">Active</button>
+        <button class="tab" data-tab="resolved">Resolved</button>
+      </div>
+    </div>
+    <div class="cards" id="cards"></div>
+  </section>
+</main>
+
+<script>
+  const URGENCY_WEIGHT = { low: 25, medium: 55, high: 78, critical: 100 };
+  const TYPE_BOOST = { Medical: 6, Rescue: 6, Shelter: 2, Food: 0, Transport: 0 };
+
+  let requests = [];
+  let counter = 100;
+  let currentTab = 'active';
+  let selectedUrgency = 'high';
+
+  function calcPriority(req){
+    const uScore = URGENCY_WEIGHT[req.urgency];
+    const peopleScore = Math.min(req.people, 60) / 60 * 100;
+    let score = uScore * 0.62 + peopleScore * 0.32 + (TYPE_BOOST[req.type] || 0);
+    score = Math.min(100, Math.round(score));
+    return score;
+  }
+
+  function fmtTime(d){
+    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  }
+
+  function updateClock(){
+    document.getElementById('clockTime').textContent = fmtTime(new Date());
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  document.getElementById('urgencyRow').addEventListener('click', (e)=>{
+    const opt = e.target.closest('.urgency-opt');
+    if(!opt) return;
+    document.querySelectorAll('.urgency-opt').forEach(o=>o.classList.remove('sel'));
+    opt.classList.add('sel');
+    selectedUrgency = opt.dataset.level;
+  });
+
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      currentTab = t.dataset.tab;
+      render();
+    });
+  });
+
+  document.getElementById('reqForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const location = document.getElementById('location').value.trim();
+    const people = parseInt(document.getElementById('people').value, 10) || 1;
+    const type = document.getElementById('type').value;
+
+    const req = {
+      id: counter++,
+      location: location || 'Unspecified location',
+      people, type, urgency: selectedUrgency,
+      resolved:false, createdAt:new Date()
+    };
+    req.score = calcPriority(req);
+    requests.push(req);
+
+    e.target.reset();
+    document.getElementById('people').value = 1;
+    render();
+  });
+
+  function resolveReq(id){
+    const r = requests.find(r=>r.id===id);
+    if(r) r.resolved = true;
+    render();
+  }
+
+  function render(){
+    const active = requests.filter(r=>!r.resolved).sort((a,b)=>b.score-a.score);
+    const resolved = requests.filter(r=>r.resolved).sort((a,b)=>b.id-a.id);
+
+    document.getElementById('statActive').textContent = active.length;
+    document.getElementById('statResolved').textContent = resolved.length;
+    document.getElementById('statPeople').textContent = active.reduce((s,r)=>s+r.people,0);
+    document.getElementById('statTop').textContent = active.length ? '#'+active[0].id : '—';
+
+    const list = currentTab === 'active' ? active : resolved;
+    const container = document.getElementById('cards');
+    container.innerHTML = '';
+
+    if(list.length === 0){
+      container.innerHTML = `<div class="empty">${currentTab === 'active' ? 'No active requests. The board is clear.' : 'No resolved requests yet.'}</div>`;
+      return;
+    }
+
+    list.forEach((r, i)=>{
+      const card = document.createElement('div');
+      card.className = 'card' + (r.resolved ? ' resolved' : '');
+      card.dataset.level = r.urgency;
+      card.innerHTML = `
+        <div class="rank"><span class="num">#${r.resolved ? '—' : (i+1)}</span>${r.resolved ? '' : `<span class="of">of ${active.length}</span>`}</div>
+        <div class="card-body">
+          <div class="title-row">
+            <span class="req-id">REQ #${r.id}</span>
+            <span class="req-type">${r.type} Assistance</span>
+            <span class="badge">${r.urgency}</span>
+          </div>
+          <div class="meta">
+            <span>📍 ${escapeHtml(r.location)}</span>
+            <span>👥 ${r.people} people affected</span>
+            <span>🕒 ${fmtTime(r.createdAt)}</span>
+          </div>
+        </div>
+        <div class="card-right">
+          <div class="score-wrap">
+            <div class="score">${r.score}<span style="font-size:12px;color:var(--muted-2);">/100</span></div>
+            <div class="score-label">Priority Score</div>
+            <div class="meter"><div class="meter-fill" style="width:${r.score}%;"></div></div>
+          </div>
+          <button class="resolve-btn" onclick="resolveReq(${r.id})">Mark Resolved</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // seed a couple of example requests so the board isn't empty on load
+  [
+    {location:'Riverside Colony, Block 4', people:8, type:'Medical', urgency:'critical'},
+    {location:'Hilltop Shelter Camp', people:35, type:'Shelter', urgency:'high'},
+    {location:'Old Bridge Road', people:3, type:'Rescue', urgency:'critical'},
+    {location:'Sector 7 Community Hall', people:60, type:'Food', urgency:'medium'},
+  ].forEach(d=>{
+    const req = {id:counter++, resolved:false, createdAt:new Date(), ...d};
+    req.score = calcPriority(req);
+    requests.push(req);
+  });
+
+  render();
+</script>
+</body>
+</html>
