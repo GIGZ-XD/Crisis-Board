@@ -19,10 +19,27 @@ python3 -m http.server 8000
 
 ## Files
 
-- `index.html` — page structure (request form, stats bar, ranked board)
+- `index.html` — page structure (auth screen, request form, stats bar, ranked board)
 - `style.css` — all styling and design tokens
+- `auth.js` — responder login, registration, and forgot-password logic
 - `script.js` — priority scoring logic, rendering, event handlers
 - `README.md` — this file
+
+## Responder access
+
+Before reaching the dashboard, a responder must log in.
+
+- **Log In** — username + password.
+- **Register** — full name, email, username, password, confirm password. New accounts
+  land in an in-memory `responders` array (see `auth.js`).
+- **Forgot password** — enter the email used at registration, then set a new password.
+  No email is actually sent (there's no backend); it's a self-serve reset for demo purposes.
+- A demo account is seeded so you can log in immediately: username `responder1`,
+  password `demo123`.
+
+**Note:** this is a session-only simulation for a hackathon prototype — passwords are
+kept in plain JS memory, not hashed, and nothing persists once the tab is closed or
+refreshed. Don't reuse this pattern for real credentials.
 
 ## Priority scoring
 
