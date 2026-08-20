@@ -62,20 +62,31 @@ function renderNameChips(){
 
   const hint = document.getElementById('nameCountHint');
   const peopleVal = parseInt(document.getElementById('people').value, 10) || 0;
-  if(currentNames.length === 0){
-    hint.textContent = '';
-  } else if(currentNames.length < peopleVal){
-    hint.textContent = `${currentNames.length} of ${peopleVal} named — the rest can be added as they're identified.`;
-  } else if(currentNames.length > peopleVal){
-    hint.textContent = `${currentNames.length} named — consider raising "People Affected" to match.`;
+  const atLimit = currentNames.length >= peopleVal;
+
+  const nameInput = document.getElementById('nameInput');
+  const bloodInput = document.getElementById('bloodInput');
+  const addBtn = document.getElementById('addNameBtn');
+  nameInput.disabled = atLimit;
+  bloodInput.disabled = atLimit;
+  addBtn.disabled = atLimit;
+
+  if(peopleVal === 0){
+    hint.textContent = 'Set "People Affected" to at least 1 before naming anyone.';
+  } else if(currentNames.length === 0){
+    hint.textContent = `You can name up to ${peopleVal} ${peopleVal === 1 ? 'person' : 'people'}.`;
+  } else if(atLimit){
+    hint.textContent = `Limit reached — all ${peopleVal} affected ${peopleVal === 1 ? 'person is' : 'people are'} named.`;
   } else {
-    hint.textContent = `All ${peopleVal} affected people named.`;
+    hint.textContent = `${currentNames.length} of ${peopleVal} named.`;
   }
 }
 
 function addName(){
   const input = document.getElementById('nameInput');
   const bloodSelect = document.getElementById('bloodInput');
+  const peopleVal = parseInt(document.getElementById('people').value, 10) || 0;
+  if(currentNames.length >= peopleVal) { renderNameChips(); return; }
   const val = input.value.trim();
   if(!val) return;
   currentNames.push({ name: val, blood: bloodSelect.value || 'Unknown' });
@@ -129,7 +140,15 @@ document.getElementById('nameChips').addEventListener('keydown', (e)=>{
     renderNameChips();
   }
 });
-document.getElementById('people').addEventListener('input', renderNameChips);
+document.getElementById('people').addEventListener('input', ()=>{
+  const peopleVal = parseInt(document.getElementById('people').value, 10) || 0;
+  if(currentNames.length > peopleVal){
+    currentNames = currentNames.slice(0, peopleVal);
+    editingChipIndex = null;
+  }
+  renderNameChips();
+});
+renderNameChips();
 
 document.querySelectorAll('.tab').forEach(t=>{
   t.addEventListener('click', ()=>{
@@ -221,6 +240,8 @@ function render(){
 
 function namesLine(r){
   if(editingCardId === r.id){
+    const count = (r.names || []).length;
+    const atLimit = count >= r.people;
     const rows = (r.names || []).map((p, idx) => `
       <div class="card-name-row">
         <input type="text" value="${escapeHtml(p.name)}" placeholder="Name"
@@ -233,9 +254,10 @@ function namesLine(r){
       <div class="card-names-edit">
         ${rows || '<span style="color:var(--muted-2); font-size:12.5px;">No one named yet.</span>'}
         <div class="card-names-edit-actions">
-          <button type="button" class="card-add-row-btn" onclick="addCardName(${r.id})">+ Add Person</button>
+          <button type="button" class="card-add-row-btn" onclick="addCardName(${r.id})" ${atLimit ? 'disabled' : ''}>+ Add Person</button>
           <button type="button" class="card-done-btn" onclick="toggleCardEdit(${r.id})">Done</button>
         </div>
+        <div class="card-names-limit-hint">${count} of ${r.people} named${atLimit ? ' — limit reached' : ''}</div>
       </div>
     `;
   }
@@ -272,6 +294,7 @@ function addCardName(id){
   const r = requests.find(r=>r.id===id);
   if(!r) return;
   if(!r.names) r.names = [];
+  if(r.names.length >= r.people) return;
   r.names.push({ name:'', blood:'Unknown' });
   render();
 }

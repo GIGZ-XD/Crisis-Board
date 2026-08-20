@@ -132,6 +132,10 @@ label .opt{
   font-size:11px; text-transform:uppercase; letter-spacing:0.6px; cursor:pointer;
 }
 .add-name-btn:hover{border-color:var(--accent); color:var(--accent);}
+.name-input-row input:disabled, .name-input-row select:disabled, .add-name-btn:disabled{
+  opacity:0.4; cursor:not-allowed;
+}
+.add-name-btn:disabled:hover{border-color:var(--line); color:var(--text);}
 .name-chips{
   display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;
 }
@@ -206,7 +210,10 @@ label .opt{
 }
 .card-add-row-btn{background:var(--panel); border:1px solid var(--line); color:var(--text);}
 .card-add-row-btn:hover{border-color:var(--accent); color:var(--accent);}
+.card-add-row-btn:disabled{opacity:0.4; cursor:not-allowed;}
+.card-add-row-btn:disabled:hover{border-color:var(--line); color:var(--text);}
 .card-done-btn{background:var(--low); border:1px solid var(--low); color:#0d1712; font-weight:600;}
+.card-names-limit-hint{font-size:11px; color:var(--muted-2); font-family:'IBM Plex Mono',monospace;}
 
 /* ===================== AUTH SCREEN ===================== */
 .app-root{display:none;}
