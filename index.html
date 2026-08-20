@@ -40,6 +40,22 @@
       <label for="people">People Affected</label>
       <input type="number" id="people" min="1" value="1" required>
 
+      <label for="nameInput">Names of People Affected <span class="opt">(optional, if known)</span></label>
+      <div class="name-input-row">
+        <input type="text" id="nameInput" placeholder="Full name">
+        <select id="bloodInput">
+          <option value="">Blood type</option>
+          <option>A+</option><option>A-</option>
+          <option>B+</option><option>B-</option>
+          <option>AB+</option><option>AB-</option>
+          <option>O+</option><option>O-</option>
+          <option value="Unknown">Unknown</option>
+        </select>
+        <button type="button" id="addNameBtn" class="add-name-btn">Add</button>
+      </div>
+      <div class="name-chips" id="nameChips"></div>
+      <div class="form-hint" id="nameCountHint"></div>
+
       <label for="type">Assistance Type</label>
       <select id="type">
         <option value="Medical">Medical</option>

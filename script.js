@@ -5,6 +5,14 @@ let requests = [];
 let counter = 100;
 let currentTab = 'active';
 let selectedUrgency = 'high';
+let currentNames = [];
+let editingChipIndex = null;
+let editingCardId = null;
+
+const BLOOD_TYPES = ['A+','A-','B+','B-','AB+','AB-','O+','O-','Unknown'];
+function bloodOptionsHtml(selected){
+  return BLOOD_TYPES.map(bt => `<option value="${bt}" ${bt===selected ? 'selected' : ''}>${bt}</option>`).join('');
+}
 
 function calcPriority(req){
   const uScore = URGENCY_WEIGHT[req.urgency];
@@ -32,6 +40,97 @@ document.getElementById('urgencyRow').addEventListener('click', (e)=>{
   selectedUrgency = opt.dataset.level;
 });
 
+function renderNameChips(){
+  const wrap = document.getElementById('nameChips');
+  wrap.innerHTML = '';
+  currentNames.forEach((person, idx)=>{
+    const chip = document.createElement('span');
+
+    if(editingChipIndex === idx){
+      chip.className = 'chip-edit';
+      chip.innerHTML = `
+        <input type="text" value="${escapeHtml(person.name)}" data-edit-idx="${idx}" class="chip-edit-name">
+        <select data-edit-idx="${idx}" class="chip-edit-blood">${bloodOptionsHtml(person.blood)}</select>
+        <button type="button" class="chip-done" data-done-idx="${idx}" aria-label="Done editing">✓</button>
+      `;
+    } else {
+      chip.className = 'name-chip';
+      chip.innerHTML = `<button type="button" class="chip-label" data-edit-open="${idx}">${escapeHtml(person.name)} <span class="blood-tag">${escapeHtml(person.blood)}</span></button> <button type="button" aria-label="Remove ${escapeHtml(person.name)}" data-idx="${idx}">&times;</button>`;
+    }
+    wrap.appendChild(chip);
+  });
+
+  const hint = document.getElementById('nameCountHint');
+  const peopleVal = parseInt(document.getElementById('people').value, 10) || 0;
+  if(currentNames.length === 0){
+    hint.textContent = '';
+  } else if(currentNames.length < peopleVal){
+    hint.textContent = `${currentNames.length} of ${peopleVal} named — the rest can be added as they're identified.`;
+  } else if(currentNames.length > peopleVal){
+    hint.textContent = `${currentNames.length} named — consider raising "People Affected" to match.`;
+  } else {
+    hint.textContent = `All ${peopleVal} affected people named.`;
+  }
+}
+
+function addName(){
+  const input = document.getElementById('nameInput');
+  const bloodSelect = document.getElementById('bloodInput');
+  const val = input.value.trim();
+  if(!val) return;
+  currentNames.push({ name: val, blood: bloodSelect.value || 'Unknown' });
+  input.value = '';
+  bloodSelect.value = '';
+  renderNameChips();
+  input.focus();
+}
+
+document.getElementById('addNameBtn').addEventListener('click', addName);
+document.getElementById('nameInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    addName();
+  }
+});
+document.getElementById('nameChips').addEventListener('click', (e)=>{
+  const openBtn = e.target.closest('button[data-edit-open]');
+  if(openBtn){
+    editingChipIndex = parseInt(openBtn.dataset.editOpen, 10);
+    renderNameChips();
+    return;
+  }
+  const doneBtn = e.target.closest('button[data-done-idx]');
+  if(doneBtn){
+    editingChipIndex = null;
+    renderNameChips();
+    return;
+  }
+  const removeBtn = e.target.closest('button[data-idx]');
+  if(removeBtn){
+    currentNames.splice(parseInt(removeBtn.dataset.idx, 10), 1);
+    if(editingChipIndex !== null) editingChipIndex = null;
+    renderNameChips();
+  }
+});
+document.getElementById('nameChips').addEventListener('input', (e)=>{
+  const input = e.target.closest('.chip-edit-name');
+  if(!input) return;
+  currentNames[parseInt(input.dataset.editIdx, 10)].name = input.value;
+});
+document.getElementById('nameChips').addEventListener('change', (e)=>{
+  const select = e.target.closest('.chip-edit-blood');
+  if(!select) return;
+  currentNames[parseInt(select.dataset.editIdx, 10)].blood = select.value;
+});
+document.getElementById('nameChips').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && e.target.closest('.chip-edit-name')){
+    e.preventDefault();
+    editingChipIndex = null;
+    renderNameChips();
+  }
+});
+document.getElementById('people').addEventListener('input', renderNameChips);
+
 document.querySelectorAll('.tab').forEach(t=>{
   t.addEventListener('click', ()=>{
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
@@ -51,6 +150,7 @@ document.getElementById('reqForm').addEventListener('submit', (e)=>{
     id: counter++,
     location: location || 'Unspecified location',
     people, type, urgency: selectedUrgency,
+    names: [...currentNames],
     resolved:false, createdAt:new Date()
   };
   req.score = calcPriority(req);
@@ -58,6 +158,8 @@ document.getElementById('reqForm').addEventListener('submit', (e)=>{
 
   e.target.reset();
   document.getElementById('people').value = 1;
+  currentNames = [];
+  renderNameChips();
   render();
 });
 
@@ -102,6 +204,7 @@ function render(){
           <span>👥 ${r.people} people affected</span>
           <span>🕒 ${fmtTime(r.createdAt)}</span>
         </div>
+        ${namesLine(r)}
       </div>
       <div class="card-right">
         <div class="score-wrap">
@@ -116,6 +219,63 @@ function render(){
   });
 }
 
+function namesLine(r){
+  if(editingCardId === r.id){
+    const rows = (r.names || []).map((p, idx) => `
+      <div class="card-name-row">
+        <input type="text" value="${escapeHtml(p.name)}" placeholder="Name"
+               oninput="updateCardName(${r.id}, ${idx}, 'name', this.value)">
+        <select onchange="updateCardName(${r.id}, ${idx}, 'blood', this.value)">${bloodOptionsHtml(p.blood)}</select>
+        <button type="button" class="row-remove-btn" aria-label="Remove" onclick="removeCardName(${r.id}, ${idx})">&times;</button>
+      </div>
+    `).join('');
+    return `
+      <div class="card-names-edit">
+        ${rows || '<span style="color:var(--muted-2); font-size:12.5px;">No one named yet.</span>'}
+        <div class="card-names-edit-actions">
+          <button type="button" class="card-add-row-btn" onclick="addCardName(${r.id})">+ Add Person</button>
+          <button type="button" class="card-done-btn" onclick="toggleCardEdit(${r.id})">Done</button>
+        </div>
+      </div>
+    `;
+  }
+
+  if(!r.names || r.names.length === 0){
+    return `<div class="names-line"><button type="button" class="names-edit-btn" onclick="toggleCardEdit(${r.id})">+ Add names</button></div>`;
+  }
+  const shown = r.names.slice(0, 4)
+    .map(p => `${escapeHtml(p.name)} <span class="blood-tag">${escapeHtml(p.blood)}</span>`)
+    .join(', ');
+  const extra = r.names.length > 4 ? ` +${r.names.length - 4} more` : '';
+  return `<div class="names-line">🏷️ ${shown}${extra} <button type="button" class="names-edit-btn" onclick="toggleCardEdit(${r.id})">Edit</button></div>`;
+}
+
+function toggleCardEdit(id){
+  editingCardId = editingCardId === id ? null : id;
+  render();
+}
+
+function updateCardName(id, idx, field, value){
+  const r = requests.find(r=>r.id===id);
+  if(!r || !r.names[idx]) return;
+  r.names[idx][field] = value;
+}
+
+function removeCardName(id, idx){
+  const r = requests.find(r=>r.id===id);
+  if(!r) return;
+  r.names.splice(idx, 1);
+  render();
+}
+
+function addCardName(id){
+  const r = requests.find(r=>r.id===id);
+  if(!r) return;
+  if(!r.names) r.names = [];
+  r.names.push({ name:'', blood:'Unknown' });
+  render();
+}
+
 function escapeHtml(str){
   const d = document.createElement('div');
   d.textContent = str;
@@ -124,10 +284,14 @@ function escapeHtml(str){
 
 // seed a couple of example requests so the board isn't empty on load
 [
-  {location:'Riverside Colony, Block 4', people:8, type:'Medical', urgency:'critical'},
-  {location:'Hilltop Shelter Camp', people:35, type:'Shelter', urgency:'high'},
-  {location:'Old Bridge Road', people:3, type:'Rescue', urgency:'critical'},
-  {location:'Sector 7 Community Hall', people:60, type:'Food', urgency:'medium'},
+  {location:'Riverside Colony, Block 4', people:8, type:'Medical', urgency:'critical', names:[
+    {name:'Asha Rao', blood:'O-'}, {name:'Vikram Nair', blood:'B+'}, {name:'Fatima Sheikh', blood:'AB+'}
+  ]},
+  {location:'Hilltop Shelter Camp', people:35, type:'Shelter', urgency:'high', names:[]},
+  {location:'Old Bridge Road', people:3, type:'Rescue', urgency:'critical', names:[
+    {name:'Rohan Das', blood:'A+'}, {name:'Priya Menon', blood:'Unknown'}, {name:'Arjun Kulkarni', blood:'O+'}
+  ]},
+  {location:'Sector 7 Community Hall', people:60, type:'Food', urgency:'medium', names:[]},
 ].forEach(d=>{
   const req = {id:counter++, resolved:false, createdAt:new Date(), ...d};
   req.score = calcPriority(req);
