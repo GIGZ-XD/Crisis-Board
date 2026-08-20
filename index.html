@@ -12,6 +12,92 @@
 <body>
 <div class="scan"></div>
 
+<!-- ===================== AUTH SCREEN ===================== -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-mark">CB</div>
+      <div>
+        <h1>CrisisBoard</h1>
+        <span class="sub">Responder Access</span>
+      </div>
+    </div>
+
+    <div class="auth-tabs" id="authTabs">
+      <button type="button" class="auth-tab active" data-view="login">Log In</button>
+      <button type="button" class="auth-tab" data-view="register">Register</button>
+    </div>
+
+    <!-- LOGIN VIEW -->
+    <form id="loginForm" class="auth-view active" data-view="login">
+      <label for="loginUsername">Username</label>
+      <input type="text" id="loginUsername" autocomplete="username" required>
+
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" autocomplete="current-password" required>
+
+      <div class="auth-msg" id="loginMsg"></div>
+
+      <button type="submit" class="submit-btn">Log In</button>
+      <button type="button" class="auth-link" data-view="forgot">Forgot password?</button>
+      <div class="auth-hint">Demo account — username <b>responder1</b>, password <b>demo123</b></div>
+    </form>
+
+    <!-- REGISTER VIEW -->
+    <form id="registerForm" class="auth-view" data-view="register">
+      <label for="regFullName">Full Name</label>
+      <input type="text" id="regFullName" autocomplete="name" required>
+
+      <label for="regEmail">Email</label>
+      <input type="email" id="regEmail" autocomplete="email" required>
+
+      <label for="regUsername">Username</label>
+      <input type="text" id="regUsername" autocomplete="username" required>
+
+      <label for="regPassword">Password</label>
+      <input type="password" id="regPassword" autocomplete="new-password" minlength="6" required>
+
+      <label for="regConfirm">Confirm Password</label>
+      <input type="password" id="regConfirm" autocomplete="new-password" minlength="6" required>
+
+      <div class="auth-msg" id="registerMsg"></div>
+
+      <button type="submit" class="submit-btn">Register as Responder</button>
+      <div class="auth-hint">Already registered? Use the Log In tab above.</div>
+    </form>
+
+    <!-- FORGOT PASSWORD VIEW: step 1 (email lookup) -->
+    <form id="forgotEmailForm" class="auth-view" data-view="forgot">
+      <label for="forgotEmail">Registered Email</label>
+      <input type="email" id="forgotEmail" autocomplete="email" required>
+
+      <div class="auth-msg" id="forgotEmailMsg"></div>
+
+      <button type="submit" class="submit-btn">Find Account</button>
+      <button type="button" class="auth-link" data-view="login">Back to Log In</button>
+    </form>
+
+    <!-- FORGOT PASSWORD VIEW: step 2 (set new password) -->
+    <form id="resetPasswordForm" class="auth-view" data-view="reset">
+      <div class="auth-hint" id="resetForUser"></div>
+
+      <label for="resetPassword">New Password</label>
+      <input type="password" id="resetPassword" autocomplete="new-password" minlength="6" required>
+
+      <label for="resetConfirm">Confirm New Password</label>
+      <input type="password" id="resetConfirm" autocomplete="new-password" minlength="6" required>
+
+      <div class="auth-msg" id="resetMsg"></div>
+
+      <button type="submit" class="submit-btn">Set New Password</button>
+      <button type="button" class="auth-link" data-view="login">Back to Log In</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MAIN APP ===================== -->
+<div id="appRoot" class="app-root">
+
 <header>
   <div class="brand">
     <div class="brand-mark">CB</div>
@@ -20,7 +106,14 @@
       <span class="sub">Emergency Resource Coordination</span>
     </div>
   </div>
-  <div class="clock"><span class="live-dot"></span>SESSION ACTIVE — <b id="clockTime">--:--:--</b></div>
+  <div class="header-right">
+    <div class="responder-badge">
+      <span class="live-dot"></span>
+      <span id="responderName">—</span>
+      <button type="button" id="logoutBtn" class="logout-btn">Log Out</button>
+    </div>
+    <div class="clock">SESSION ACTIVE — <b id="clockTime">--:--:--</b></div>
+  </div>
 </header>
 
 <div class="stats">
@@ -90,6 +183,10 @@
   </section>
 </main>
 
+</div>
+<!-- /appRoot -->
+
+<script src="auth.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
